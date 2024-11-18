@@ -1,4 +1,5 @@
 
+from services.coingecko_api import CoinGeckoAPI
 from services.googlesheet_handler import GoogleSheetHandler
 
 
@@ -21,5 +22,23 @@ def main():
     # ]
     # handler.update_portfolio(sample_portfolio, total_value=50000)
 
+# Example usage
 if __name__ == "__main__":
-    main()
+    
+    # Replace with your actual API key
+    coingecko = CoinGeckoAPI()
+    
+    # Check API status
+    print("API Status:", coingecko.ping())
+    
+    # Get price of Bitcoin and Ethereum
+    print("Prices:", coingecko.get_price("bitcoin,ethereum"))
+    
+    # Get list of all supported coins
+    print("Coins List:", coingecko.get_coins_list()[:5])  # Print first 5 coins for brevity
+    
+    # Get detailed data for Bitcoin
+    print("Bitcoin Data:", coingecko.get_coin_data("bitcoin"))
+    
+    # Get market data for Bitcoin
+    print("Bitcoin Market Data:", coingecko.get_market_data("bitcoin"))
