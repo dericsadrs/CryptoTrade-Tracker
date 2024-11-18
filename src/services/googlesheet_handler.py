@@ -28,9 +28,9 @@ class GoogleSheetHandler:
 
         for asset in portfolio:
             self.sheet.append_row([
-                asset["crypto"],
-                asset["quantity"],
-                asset.get("price", 0),
-                asset["value"],
-                f"{asset['percentage']:.2f}%"
+                asset["Crypto"],
+                asset["Quantity"],
+                asset.get("Price (USD)", 0),
+                asset.get("Value (USD)", 0),
+                asset.get("% of Portfolio", "0%")
             ])
