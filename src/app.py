@@ -1,6 +1,6 @@
-
 from services.coingecko_api import CoinGeckoAPI
 from services.googlesheet_handler import GoogleSheetHandler
+from services.portfolio_updater import PortfolioUpdater
 
 
 def main():
@@ -15,30 +15,33 @@ def main():
     portfolio_data = handler.read_portfolio()
     print("Current Portfolio:", portfolio_data)
 
-    # # Example: Update the portfolio with sample data
-    # sample_portfolio = [
-    #     {"crypto": "Bitcoin", "quantity": 0.5, "price": 50000, "value": 25000, "percentage": 50.0},
-    #     {"crypto": "Ethereum", "quantity": 2, "price": 2000, "value": 4000, "percentage": 8.0},
-    # ]
-    # handler.update_portfolio(sample_portfolio, total_value=50000)
+    # Initialize CoinGecko API
+    coingecko = CoinGeckoAPI()
+    
+    # Get prices for the cryptocurrencies in the portfolio
+    crypto_names = ','.join([asset["Crypto"].split(' (')[0].strip().lower() for asset in portfolio_data if asset["Crypto"] != "Total "])
+    prices = coingecko.get_price(crypto_names)
+    print("Prices:", prices)
+
+    # Update portfolio values and percentages
+    updater = PortfolioUpdater(portfolio_data, prices)
+    updated_portfolio = updater.update_portfolio()
+    
+    # Update the spreadsheet with the new portfolio data
+    total_value = sum(item['Value (USD)'] for item in updated_portfolio if item['Value (USD)'])
+    handler.update_portfolio(updated_portfolio, total_value=total_value)
+
+    # Print updated portfolio
+    print("Updated Portfolio:", updated_portfolio)
+
 
 # Example usage
 if __name__ == "__main__":
-    
     # Replace with your actual API key
     coingecko = CoinGeckoAPI()
     
     # Check API status
     print("API Status:", coingecko.ping())
     
-    # Get price of Bitcoin and Ethereum
-    print("Prices:", coingecko.get_price("bitcoin,ethereum"))
-    
-    # Get list of all supported coins
-    print("Coins List:", coingecko.get_coins_list()[:5])  # Print first 5 coins for brevity
-    
-    # Get detailed data for Bitcoin
-    print("Bitcoin Data:", coingecko.get_coin_data("bitcoin"))
-    
-    # Get market data for Bitcoin
-    print("Bitcoin Market Data:", coingecko.get_market_data("bitcoin"))
+    # Run the main function to update the portfolio
+    main()
