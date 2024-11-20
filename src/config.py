@@ -12,10 +12,10 @@ class Config:
     def get_coingecko_api_key(self):
         return self.coingecko_api_key
     
-    def get_binanace_api_key(self):
-        return self.get_binanace_api_key
+    def get_binance_api_key(self):
+        return self.binance_api_key
     
-    def get_binace_secret_key(self):
+    def get_binance_secret_key(self):
         return self.binance_secret_key
 
 # Create a single instance of Config
