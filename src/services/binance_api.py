@@ -4,6 +4,7 @@ import hashlib
 import requests
 import logging
 from urllib.parse import urlencode
+from services.helpers import clean_asset_name
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -15,12 +16,6 @@ class BinanceAPI:
         self.api_key = api_key
         self.api_secret = api_secret
         self.base_url = 'https://api.binance.com'
-
-    def clean_asset_name(self, asset):
-        """Remove LD prefix and handle special cases"""
-        if asset.startswith('LD'):
-            return asset[2:]  # Remove 'LD' prefix
-        return asset
 
     def get_account_info(self):
         """Fetch account information from Binance API."""
@@ -70,7 +65,7 @@ class BinanceAPI:
             balances = self.get_account_info()
 
             # Clean up asset names by removing LD prefix
-            assets = [self.clean_asset_name(b['asset']) for b in balances if float(b['free']) > 0 or float(b['locked']) > 0]
+            assets = [clean_asset_name(b['asset']) for b in balances if float(b['free']) > 0 or float(b['locked']) > 0]
             logger.info(f"Found assets (after cleaning): {', '.join(assets)}")
 
             # Common trading pairs format
@@ -127,3 +122,25 @@ class BinanceAPI:
         except Exception as e:
             logger.error(f"An error occurred: {str(e)}")
             return []
+
+    def get_market_data(self, ticker):
+        """Fetch market data for a specific coin with 'LT' prefix."""
+        try:
+
+            endpoint = f"/api/v3/ticker/24hr?symbol={ticker}"  # Assuming you want the market data against USDT
+            logger.info(f"Fetching market data for {ticker}...")
+
+            response = requests.get(f"{self.base_url}{endpoint}")
+
+            if response.status_code == 200:
+                market_data = response.json()
+                logger.info(f"Market data for {ticker}: {market_data}")
+                return market_data
+            else:
+                logger.error(f"Error fetching market data. Status code: {response.status_code}")
+                logger.error(f"Response: {response.text}")
+                return None
+
+        except Exception as e:
+            logger.error(f"An error occurred while fetching market data: {str(e)}")
+            return None
