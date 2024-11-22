@@ -58,19 +58,61 @@ class BinanceAPI:
             logger.error(f"An error occurred while fetching account info: {str(e)}")
             return []
 
+    def get_trading_pairs_for_assets(self, assets):
+        """
+        Fetch only relevant trading pairs for given assets that exist in the account.
+        This optimized version will only return pairs where either the base or quote asset
+        is in the user's account with a non-zero balance.
+        """
+        try:
+            logger.info("Fetching exchange information for account assets...")
+            response = requests.get(f"{self.base_url}/api/v3/exchangeInfo")
+            
+            if response.status_code != 200:
+                logger.error(f"Error getting exchange info. Status code: {response.status_code}")
+                return []
+
+            exchange_info = response.json()
+            valid_pairs = []
+            assets = set(asset.upper() for asset in assets)  # Convert to set for O(1) lookup
+            
+            logger.info(f"Filtering trading pairs for assets: {', '.join(assets)}")
+            
+            # Find trading pairs where BOTH base and quote assets are in our assets list
+            for symbol_info in exchange_info['symbols']:
+                base_asset = symbol_info['baseAsset']
+                quote_asset = symbol_info['quoteAsset']
+                
+                # Only include pairs where we have both the base and quote assets
+                if (base_asset in assets and quote_asset in assets):
+                    if symbol_info['status'] == 'TRADING':  # Only include active trading pairs
+                        valid_pairs.append(symbol_info['symbol'])
+                        logger.info(f"Found valid trading pair: {symbol_info['symbol']}")
+
+            logger.info(f"Total valid trading pairs found: {len(valid_pairs)}")
+            return valid_pairs
+
+        except Exception as e:
+            logger.error(f"An error occurred while fetching trading pairs: {str(e)}")
+            return []
+
     def get_all_trades(self):
-        """Fetch all trades for the account."""
+        """Fetch all trades for the account using available trading pairs."""
         try:
             logger.info("Starting trade fetch process...")
             balances = self.get_account_info()
 
-            # Clean up asset names by removing LD prefix
-            assets = [clean_asset_name(b['asset']) for b in balances if float(b['free']) > 0 or float(b['locked']) > 0]
+            # Clean up asset names and filter for non-zero balances
+            assets = [clean_asset_name(b['asset']) for b in balances 
+                    if float(b['free']) > 0 or float(b['locked']) > 0]
             logger.info(f"Found assets (after cleaning): {', '.join(assets)}")
 
-            # Common trading pairs format
-            trading_pairs = [f"{asset}USDT" for asset in assets if asset != 'USDT']
-            logger.info(f"Checking trading pairs: {', '.join(trading_pairs)}")
+            # Get valid trading pairs where we have both assets
+            trading_pairs = self.get_trading_pairs_for_assets(assets)
+            if not trading_pairs:
+                # Fallback to USDT pairs if no pairs found where we have both assets
+                trading_pairs = [f"{asset}USDT" for asset in assets if asset != 'USDT']
+                logger.info(f"Falling back to USDT pairs: {', '.join(trading_pairs)}")
 
             all_trades = []
             for pair in trading_pairs:
@@ -123,24 +165,23 @@ class BinanceAPI:
             logger.error(f"An error occurred: {str(e)}")
             return []
 
-    def get_market_data(self, ticker):
-        """Fetch market data for a specific coin with 'LT' prefix."""
-        try:
+    # def get_market_data(self, ticker):
+    #     """Fetch market data for a specific coin."""
+    #     try:
+    #         endpoint = f"/api/v3/ticker/24hr?symbol={ticker}"
+    #         logger.info(f"Fetching market data for {ticker}...")
 
-            endpoint = f"/api/v3/ticker/24hr?symbol={ticker}"  # Assuming you want the market data against USDT
-            logger.info(f"Fetching market data for {ticker}...")
+    #         response = requests.get(f"{self.base_url}{endpoint}")
 
-            response = requests.get(f"{self.base_url}{endpoint}")
+    #         if response.status_code == 200:
+    #             market_data = response.json()
+    #             logger.info(f"Market data for {ticker}: {market_data}")
+    #             return market_data
+    #         else:
+    #             logger.error(f"Error fetching market data. Status code: {response.status_code}")
+    #             logger.error(f"Response: {response.text}")
+    #             return None
 
-            if response.status_code == 200:
-                market_data = response.json()
-                logger.info(f"Market data for {ticker}: {market_data}")
-                return market_data
-            else:
-                logger.error(f"Error fetching market data. Status code: {response.status_code}")
-                logger.error(f"Response: {response.text}")
-                return None
-
-        except Exception as e:
-            logger.error(f"An error occurred while fetching market data: {str(e)}")
-            return None
+    #     except Exception as e:
+    #         logger.error(f"An error occurred while fetching market data: {str(e)}")
+    #         return None
