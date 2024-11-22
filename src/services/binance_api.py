@@ -17,6 +17,15 @@ class BinanceAPI:
         self.api_secret = api_secret
         self.base_url = 'https://api.binance.com'
 
+    def _generate_signature(self, params):
+        """Generate a signature for the given parameters."""
+        query_string = urlencode(params)
+        return hmac.new(
+            self.api_secret.encode('utf-8'),
+            query_string.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+
     def get_account_info(self):
         """Fetch account information from Binance API."""
         try:
@@ -28,14 +37,7 @@ class BinanceAPI:
                 'timestamp': timestamp
             }
 
-            query_string = urlencode(params)
-            signature = hmac.new(
-                self.api_secret.encode('utf-8'),
-                query_string.encode('utf-8'),
-                hashlib.sha256
-            ).hexdigest()
-
-            params['signature'] = signature
+            params['signature'] = self._generate_signature(params)
             headers = {
                 'X-MBX-APIKEY': self.api_key
             }
@@ -106,14 +108,7 @@ class BinanceAPI:
                 'timestamp': timestamp
             }
 
-            query_string = urlencode(params)
-            signature = hmac.new(
-                self.api_secret.encode('utf-8'),
-                query_string.encode('utf-8'),
-                hashlib.sha256
-            ).hexdigest()
-
-            params['signature'] = signature
+            params['signature'] = self._generate_signature(params)
             headers = {
                 'X-MBX-APIKEY': self.api_key
             }
