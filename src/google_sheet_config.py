@@ -3,7 +3,7 @@ from enum import Enum
 class Worksheet(str, Enum):
     """Enum for worksheet names"""
     TRADE_HISTORY = 'trade_history'
-  
+    HOLDINGS = 'holdings'  
 
 class GoogleSheetsConfig:
     """Configuration for Google Sheets integration"""
