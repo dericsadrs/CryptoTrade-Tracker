@@ -6,6 +6,7 @@ import logging
 from urllib.parse import urlencode
 from services.binance.binance_auth import BinanceAuth
 from services.helpers import clean_asset_name
+import json
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
@@ -79,6 +80,9 @@ class BinanceTradeHistory:
                 logger.error(f"Error getting trade history for {symbol}. Status code: {response.status_code}")
                 logger.error(f"Response: {response.text}")
                 return []
+
+            # Pretty print the JSON response
+            print(json.dumps(response.json(), indent=4))
 
             return response.json()
 
