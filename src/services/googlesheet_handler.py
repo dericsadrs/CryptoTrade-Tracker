@@ -5,6 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import datetime  # Import datetime for time conversion
 import logging
 from google_sheet_config import google_sheet_config_instance
+from services.trade_mapping import TradeHeaders, get_universal_headers, map_binance_trade
 
 logger = logging.getLogger(__name__)
 
@@ -53,23 +54,24 @@ class GoogleSheetHandler:
                 asset.get("% of Portfolio", "0%")
             ])
 
+    
     def write_trades(self, trades):
-        """Writes trade data to the spreadsheet, skipping existing Trade IDs."""
+        """Writes simplified trade data to the spreadsheet"""
         # Read existing records to check for existing Trade IDs
         existing_records = self.sheet.get_all_records()
         
         # Convert existing trade IDs to integers for comparison
-        existing_trade_ids = {int(float(record['Trade ID'])) for record in existing_records if record['Trade ID']}  # Handle any format
+        existing_trade_ids = {int(float(record['Trade ID'])) for record in existing_records if record['Trade ID']}
 
-        # Prepare headers
-        headers = ["Symbol", "Trade ID", "Order ID", "Price", "Quantity", "Quote Quantity", "Commission", "Commission Asset", "Time"]
+        # Get universal headers
+        headers = get_universal_headers()
 
         # Check if sheet is empty and write headers if necessary
         if not existing_records:
             self.sheet.append_row(headers)
             
-            # Format the Trade ID and Order ID columns as plain text
-            self.sheet.format('B:C', {
+            # Format the Trade ID column as plain text
+            self.sheet.format('C', {
                 "numberFormat": {
                     "type": "TEXT"
                 }
@@ -77,25 +79,16 @@ class GoogleSheetHandler:
 
         # Iterate over the trades and write new ones
         for trade in trades:
-            trade_id = int(trade.get('id', 0))  # Convert to integer for comparison
+            trade_id = int(trade.get('id', 0))
             
             if trade_id in existing_trade_ids:
                 logger.info(f"Trade ID {trade_id} already exists. Skipping...")
                 continue
 
-            # Convert timestamp
-            timestamp_ms = trade.get('time', 0)
-            timestamp_s = timestamp_ms / 1000.0
-            readable_time = datetime.datetime.fromtimestamp(timestamp_s).strftime('%Y-%m-%d %H:%M:%S')
-
-            self.sheet.append_row([
-                trade.get('symbol', ''),
-                str(trade_id),  # Store as string to prevent decimal formatting
-                str(trade.get('orderId', '')),
-                trade.get('price', ''),
-                trade.get('qty', ''),
-                trade.get('quoteQty', ''),
-                trade.get('commission', ''),
-                trade.get('commissionAsset', ''),
-                readable_time,
-            ])
+            # Map the trade data to universal format
+            mapped_trade = map_binance_trade(trade)
+            
+            # Prepare row data in the same order as headers
+            row_data = [mapped_trade[header] for header in TradeHeaders]
+            
+            self.sheet.append_row(row_data)
