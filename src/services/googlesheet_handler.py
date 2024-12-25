@@ -57,18 +57,14 @@ class GoogleSheetHandler:
     
     def write_trades(self, trades):
         """Writes simplified trade data to the spreadsheet"""
-        # Read existing records to check for existing Trade IDs
-        existing_records = self.sheet.get_all_records()
-        
-        # Convert existing trade IDs to integers for comparison
-        existing_trade_ids = {int(float(record['Trade ID'])) for record in existing_records if record['Trade ID']}
-
-        # Get universal headers
+        # Get the first row to check for headers
+        first_row = self.sheet.row_values(1)
         headers = get_universal_headers()
-
-        # Check if sheet is empty and write headers if necessary
-        if not existing_records:
+        
+        # Initialize headers only if the sheet is completely empty
+        if not first_row:
             self.sheet.append_row(headers)
+            logger.info("Headers written to the sheet.")
             
             # Format the Trade ID column as plain text
             self.sheet.format('C', {
@@ -76,6 +72,10 @@ class GoogleSheetHandler:
                     "type": "TEXT"
                 }
             })
+        
+        # Get all records (excluding the header row) to check for existing Trade IDs
+        existing_records = self.sheet.get_all_records()
+        existing_trade_ids = {int(float(record['Trade ID'])) for record in existing_records if record['Trade ID']}
 
         # Iterate over the trades and write new ones
         for trade in trades:
@@ -92,3 +92,4 @@ class GoogleSheetHandler:
             row_data = [mapped_trade[header] for header in TradeHeaders]
             
             self.sheet.append_row(row_data)
+            logger.info(f"Trade data written: {row_data}")
