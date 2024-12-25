@@ -1,22 +1,23 @@
-from services.binance.binance_trade_history import BinanceTradeHistory
+import json
+from services.binance.binance_client import BinanceClient
 from services.googlesheet_handler import GoogleSheetHandler
 from services.helpers import clean_asset_name
 import logging
 from google_sheet_config import Worksheet
+from services.trade_mapping import map_binance_trade
 
 logger = logging.getLogger(__name__)
 
 def get_available_pairs():
-    client = BinanceTradeHistory()
-    balances = client.auth.get_account_info()
-
-    assets = [clean_asset_name(b['asset']) for b in balances 
+    client = BinanceClient()
+    account = client.client.get_account()
+    
+    assets = [clean_asset_name(b['asset']) for b in account['balances'] 
              if float(b['free']) > 0 or float(b['locked']) > 0]
-    trading_pairs = client.get_trading_pairs_for_assets(assets)
-    return trading_pairs
+    return client.get_trading_pairs_for_assets(assets)
 
 def get_trade_history_for_pairs():
-    client = BinanceTradeHistory()
+    client = BinanceClient()
     available_pairs = get_available_pairs()
     
     all_trades = []
@@ -28,25 +29,13 @@ def get_trade_history_for_pairs():
 
 def main():
     try:
-        # Initialize Google Sheet handler
         sheet_handler = GoogleSheetHandler(Worksheet.TRADE_HISTORY)
-        
-        # Get available trading pairs
         available_pairs = get_available_pairs()
-        logger.info(f"Available trading pairs: {available_pairs}")
-
-        # Get trade history
         trades = get_trade_history_for_pairs()
-        logger.info(f"Retrieved total of {len(trades)} trades")
-        
-        # Write trades to Google Sheet
         sheet_handler.write_trades(trades)
-        logger.info("Successfully wrote trades to Google Sheet")
-        
         return trades
-
     except Exception as e:
-        logger.error(f"An error occurred in main: {str(e)}")
+        logger.error(f"Error in main: {str(e)}")
         return []
 
 if __name__ == "__main__":
