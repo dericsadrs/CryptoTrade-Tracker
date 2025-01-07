@@ -1,7 +1,6 @@
 import json
 from services.binance.binance_client import BinanceClient
 from services.googlesheet_handler import GoogleSheetHandler
-from services.helpers import clean_asset_name
 import logging
 from google_sheet_config import Worksheet
 from services.trade_mapping import map_binance_trade
