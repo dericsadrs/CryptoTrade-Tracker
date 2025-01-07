@@ -3,8 +3,7 @@ from services.binance.binance_client import BinanceClient
 from services.googlesheet_handler import GoogleSheetHandler
 import logging
 from google_sheet_config import Worksheet
-from services.trade_mapping import map_binance_trade
-
+from services.bybit.bybit_client import BybitClient
 logger = logging.getLogger(__name__)
 
 def get_binance_trades():
@@ -46,4 +45,8 @@ def main():
         return []
 
 if __name__ == "__main__":
-    main()
+    client = BybitClient()
+    
+    print(client.client)  # Verify session object
+    print(client.get_wallet_balance())  # Verify wallet balance
+    

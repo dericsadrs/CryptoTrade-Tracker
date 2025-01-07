@@ -1,7 +1,6 @@
 import json
 from binance.client import Client
 from services.googlesheet_handler import GoogleSheetHandler
-from services.helpers import clean_asset_name
 import logging
 from google_sheet_config import Worksheet
 from config import config_instance
