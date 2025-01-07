@@ -10,7 +10,12 @@ from services.trade_mapping import TradeHeaders, get_universal_headers, map_bina
 logger = logging.getLogger(__name__)
 
 class GoogleSheetHandler:
-    def __init__(self, sheet_name):
+    # Constants for default worksheet size
+    DEFAULT_ROWS = 1000
+    DEFAULT_COLUMNS = 26
+
+    def __init__(self, sheet_name: str):
+        """Initializes the GoogleSheetHandler with the specified sheet name."""
         self.json_key_file = google_sheet_config_instance.get_credentials_path()
         self.spreadsheet_name = google_sheet_config_instance.get_sheet_name()
         self.sheet_name = sheet_name
@@ -30,16 +35,16 @@ class GoogleSheetHandler:
             worksheet = spreadsheet.worksheet(self.sheet_name)
         except gspread.exceptions.WorksheetNotFound:
             # If sheet doesn't exist, create it
-            worksheet = spreadsheet.add_worksheet(self.sheet_name, 1000, 26)  # Default rows and columns
+            worksheet = spreadsheet.add_worksheet(self.sheet_name, self.DEFAULT_ROWS, self.DEFAULT_COLUMNS)
             logger.info(f"Created new worksheet: {self.sheet_name}")
             
         return worksheet
 
-    def read_portfolio(self):
+    def read_portfolio(self) -> list:
         """Reads portfolio data from the spreadsheet."""
         return self.sheet.get_all_records()
 
-    def update_portfolio(self, portfolio, total_value):
+    def update_portfolio(self, portfolio: list, total_value: float):
         """Updates the spreadsheet with the portfolio data."""
         self.sheet.clear()
         headers = ["Crypto", "Quantity", "Price (USD)", "Value (USD)", "% of Portfolio"]
@@ -55,7 +60,7 @@ class GoogleSheetHandler:
             ])
 
     
-    def write_trades(self, trades):
+    def write_trades(self, trades: list):
         """Writes simplified trade data to the spreadsheet"""
         # Get the first row to check for headers
         first_row = self.sheet.row_values(1)
