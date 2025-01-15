@@ -86,6 +86,9 @@ class BybitClient:
                     startTime=chunk_start_ms,
                     endTime=chunk_end_ms
                 )
+                
+                # Log the raw response
+                logger.info(f"Raw Bybit API response: {response}")
 
                 # Combine results
                 if "result" in response and "list" in response["result"]:
@@ -97,5 +100,5 @@ class BybitClient:
             return all_trades
 
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error fetching Bybit trades: {e}")
             raise
