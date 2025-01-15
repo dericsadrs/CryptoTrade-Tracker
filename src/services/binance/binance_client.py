@@ -49,7 +49,8 @@ class BinanceClient:
         Fetches the trade history for a specific trading symbol.
         """
         try:
-            trades = self.client.get_my_trades(symbol=symbol)
+            cleaned_symbol = self.clean_asset_name(symbol)
+            trades = self.client.get_my_trades(symbol=cleaned_symbol)
             print(json.dumps(trades, indent=4))
             return trades
         except Exception as e:
