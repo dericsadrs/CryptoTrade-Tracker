@@ -1,7 +1,7 @@
 # trade_mapping.py
 
 from enum import Enum
-from typing import Dict, Any
+from typing import Dict, Any, List
 import datetime
 
 class TradeHeaders(str, Enum):
@@ -15,6 +15,9 @@ class TradeHeaders(str, Enum):
     SIDE = 'Side'    # Buy/Sell
     TIME = 'Time'
 
+# Define a constant for milliseconds to seconds conversion
+MILLISECONDS_TO_SECONDS = 1000.0
+
 def map_binance_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
     """
     Maps Binance trade response to simplified universal format
@@ -27,15 +30,21 @@ def map_binance_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
     """
     # Convert timestamp to readable format
     timestamp_ms = trade.get('time', 0)
-    timestamp_s = timestamp_ms / 1000.0
+    timestamp_s = timestamp_ms / MILLISECONDS_TO_SECONDS
     readable_time = datetime.datetime.fromtimestamp(timestamp_s).strftime('%Y-%m-%d %H:%M:%S')
     
     # Determine trade side
     side = 'BUY' if trade.get('isBuyer', False) else 'SELL'
     
+    # Error handling for price and quantity
+    try:
+        price = float(trade.get('price', 0))
+        quantity = float(trade.get('qty', 0))
+    except (ValueError, TypeError):
+        price = 0.0
+        quantity = 0.0
+    
     # Calculate total value
-    price = float(trade.get('price', 0))
-    quantity = float(trade.get('qty', 0))
     total = price * quantity
     
     return {
@@ -49,6 +58,42 @@ def map_binance_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
         TradeHeaders.TIME: readable_time
     }
 
-def get_universal_headers() -> list:
+def map_bybit_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Maps Bybit trade response to simplified universal format
+    
+    Args:
+        trade: Raw trade data from Bybit API
+        
+    Returns:
+        Dict with standardized trade data
+    """
+    # Convert timestamp to readable format
+    timestamp_ms = int(trade.get('createdTime', 0))
+    timestamp_s = timestamp_ms / MILLISECONDS_TO_SECONDS
+    readable_time = datetime.datetime.fromtimestamp(timestamp_s).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Get price and quantity
+    try:
+        price = float(trade.get('avgPrice', 0))
+        quantity = float(trade.get('cumExecQty', 0))
+        total = float(trade.get('cumExecValue', 0))  # Bybit provides this directly
+    except (ValueError, TypeError):
+        price = 0.0
+        quantity = 0.0
+        total = 0.0
+    
+    return {
+        TradeHeaders.EXCHANGE: 'Bybit',
+        TradeHeaders.SYMBOL: trade.get('symbol', ''),
+        TradeHeaders.TRADE_ID: str(trade.get('orderId', '')),
+        TradeHeaders.PRICE: str(price),
+        TradeHeaders.QUANTITY: str(quantity),
+        TradeHeaders.TOTAL: str(total),
+        TradeHeaders.SIDE: trade.get('side', '').upper(),
+        TradeHeaders.TIME: readable_time
+    }
+
+def get_universal_headers() -> List[str]:
     """Returns list of universal trade headers"""
     return [header.value for header in TradeHeaders]
