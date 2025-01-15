@@ -5,7 +5,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import datetime  # Import datetime for time conversion
 import logging
 from google_sheet_config import google_sheet_config_instance
-from services.trade_mapping import TradeHeaders, get_universal_headers, map_binance_trade
+from services.trade_mapping import TradeHeaders, get_universal_headers, map_binance_trade, map_bybit_trade
 
 logger = logging.getLogger(__name__)
 
@@ -80,21 +80,32 @@ class GoogleSheetHandler:
         
         # Get all records (excluding the header row) to check for existing Trade IDs
         existing_records = self.sheet.get_all_records()
-        existing_trade_ids = {int(float(record['Trade ID'])) for record in existing_records if record['Trade ID']}
+        # Store Trade IDs as strings to handle both numeric and string IDs
+        existing_trade_ids = {str(record['Trade ID']).strip() for record in existing_records if record['Trade ID']}
+        logger.info(f"Found {len(existing_trade_ids)} existing trade IDs")
+
+        new_trades_count = 0
+        skipped_trades_count = 0
 
         # Iterate over the trades and write new ones
         for trade in trades:
-            trade_id = int(trade.get('id', 0))
+            # Determine if it's a Bybit trade by checking for Bybit-specific fields
+            is_bybit = 'createdTime' in trade and 'orderId' in trade
             
+            # Map the trade data using the appropriate mapping function
+            mapped_trade = map_bybit_trade(trade) if is_bybit else map_binance_trade(trade)
+            
+            trade_id = str(mapped_trade[TradeHeaders.TRADE_ID]).strip()
             if trade_id in existing_trade_ids:
-                logger.info(f"Trade ID {trade_id} already exists. Skipping...")
+                logger.debug(f"Trade ID {trade_id} already exists. Skipping...")
+                skipped_trades_count += 1
                 continue
-
-            # Map the trade data to universal format
-            mapped_trade = map_binance_trade(trade)
             
             # Prepare row data in the same order as headers
             row_data = [mapped_trade[header] for header in TradeHeaders]
             
             self.sheet.append_row(row_data)
-            logger.info(f"Trade data written: {row_data}")
+            new_trades_count += 1
+            logger.debug(f"Trade data written: {row_data}")
+
+        logger.info(f"Processed trades summary: {new_trades_count} new trades written, {skipped_trades_count} duplicates skipped")
