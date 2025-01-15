@@ -58,6 +58,42 @@ def map_binance_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
         TradeHeaders.TIME: readable_time
     }
 
+def map_bybit_trade(trade: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Maps Bybit trade response to simplified universal format
+    
+    Args:
+        trade: Raw trade data from Bybit API
+        
+    Returns:
+        Dict with standardized trade data
+    """
+    # Convert timestamp to readable format
+    timestamp_ms = int(trade.get('createdTime', 0))
+    timestamp_s = timestamp_ms / MILLISECONDS_TO_SECONDS
+    readable_time = datetime.datetime.fromtimestamp(timestamp_s).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Get price and quantity
+    try:
+        price = float(trade.get('avgPrice', 0))
+        quantity = float(trade.get('cumExecQty', 0))
+        total = float(trade.get('cumExecValue', 0))  # Bybit provides this directly
+    except (ValueError, TypeError):
+        price = 0.0
+        quantity = 0.0
+        total = 0.0
+    
+    return {
+        TradeHeaders.EXCHANGE: 'Bybit',
+        TradeHeaders.SYMBOL: trade.get('symbol', ''),
+        TradeHeaders.TRADE_ID: str(trade.get('orderId', '')),
+        TradeHeaders.PRICE: str(price),
+        TradeHeaders.QUANTITY: str(quantity),
+        TradeHeaders.TOTAL: str(total),
+        TradeHeaders.SIDE: trade.get('side', '').upper(),
+        TradeHeaders.TIME: readable_time
+    }
+
 def get_universal_headers() -> List[str]:
     """Returns list of universal trade headers"""
     return [header.value for header in TradeHeaders]

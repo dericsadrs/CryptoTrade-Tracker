@@ -1,52 +1,73 @@
-import json
-from services.binance.binance_client import BinanceClient
-from services.googlesheet_handler import GoogleSheetHandler
-import logging
 from google_sheet_config import Worksheet
+from services.binance.binance_client import BinanceClient
 from services.bybit.bybit_client import BybitClient
+from services.googlesheet_handler import GoogleSheetHandler
+from services.trade_mapping import map_binance_trade, map_bybit_trade
+import logging
+
 logger = logging.getLogger(__name__)
 
 def get_binance_trades():
     """
-    Fetches all trades from Binance for available trading pairs.
-
+    Fetches and maps all trades from Binance
+    
     Returns:
-        list: List of all trades from Binance.
+        list: List of mapped Binance trades
     """
     client = BinanceClient()
     try:
-        # Get account balances to determine assets
         account = client.client.get_account()
-        assets = [b['asset'] for b in account['balances'] if float(b['free']) > 0 or float(b['locked']) > 0]
+        assets = [b['asset'] for b in account['balances'] 
+                 if float(b['free']) > 0.00001 or float(b['locked']) > 0.00001]
         
-        # Retrieve trading pairs
-        available_pairs = client.get_trading_pairs_for_assets(assets)
-        logger.info(f"Available trading pairs: {available_pairs}")
-        
-        # Retrieve trades for each pair
         all_trades = []
-        for pair in available_pairs:
-            trades = client.get_trade_history(pair)
-            all_trades.extend(trades)
-            logger.info(f"Retrieved {len(trades)} trades for {pair}")
+        for asset in assets:
+            trades = client.get_trade_history(asset)
+            mapped_trades = [map_binance_trade(trade) for trade in trades]
+            all_trades.extend(mapped_trades)
         
         return all_trades
     except Exception as e:
         logger.error(f"Error fetching Binance trades: {str(e)}")
         return []
+
+def get_bybit_trades():
+    """
+    Fetches and maps all trades from Bybit
+    
+    Returns:
+        list: List of mapped Bybit trades
+    """
+    client = BybitClient()
+    try:
+        trades = client.get_trade_history()
+        mapped_trades = [map_bybit_trade(trade) for trade in trades]
+        return mapped_trades
+    except Exception as e:
+        logger.error(f"Error fetching Bybit trades: {str(e)}")
+        return []
+
 def main():
     try:
-        sheet_handler = GoogleSheetHandler(Worksheet.TRADE_HISTORY)
-        trades = get_binance_trades()
-        sheet_handler.write_trades(trades)
-        return trades
+        # Get trades from both exchanges
+        binance_trades = get_binance_trades()
+        bybit_trades = get_bybit_trades()
+        
+        # Combine all trades
+        all_trades = binance_trades + bybit_trades
+        
+        # Write to Google Sheets
+        if all_trades:
+            sheet_handler = GoogleSheetHandler(Worksheet.TRADE_HISTORY)
+            sheet_handler.write_trades(all_trades)
+            
+        return all_trades
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")
         return []
 
 if __name__ == "__main__":
-    client = BybitClient()
-    
-    print(client.client)  # Verify session object
-    print(client.get_wallet_balance())  # Verify wallet balance
-    
+    trades = main()
+    print(f"Retrieved {len(trades)} total trades")
+    print(f"- Binance trades: {len([t for t in trades if t['Exchange'] == 'Binance'])}")
+    print(f"- Bybit trades: {len([t for t in trades if t['Exchange'] == 'Bybit'])}")
