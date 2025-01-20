@@ -6,6 +6,8 @@ PYTHON := python3
 PIP := pip3
 APP_PATH := src/app.py
 REQUIREMENTS := requirements.txt
+CREDENTIALS_DIR := src/credentials
+CREDENTIALS_FILE := $(CREDENTIALS_DIR)/credentials.json
 
 # Check if we're on Windows
 ifeq ($(OS),Windows_NT)
@@ -18,7 +20,7 @@ else
 	ACTIVATE := $(VENV_NAME)/bin/activate
 endif
 
-.PHONY: all venv install run clean
+.PHONY: all venv install run clean credentials
 
 # Default target
 all: venv install run
@@ -40,13 +42,25 @@ install: venv
 # Run the application
 run: venv
 	@echo "Running application..."
-	@. $(ACTIVATE) && $(PYTHON_VENV) $(APP_PATH)
+	@cd src && . ../$(ACTIVATE) && $(PYTHON) app.py
 
 # Clean up virtual environment
 clean:
 	@echo "Cleaning up..."
 	rm -rf $(VENV_NAME)
 	@echo "Cleanup complete!"
+
+# Create credentials directory and template file if they don't exist
+credentials:
+	@if [ ! -d "$(CREDENTIALS_DIR)" ]; then \
+		echo "Creating credentials directory..."; \
+		mkdir -p $(CREDENTIALS_DIR); \
+	fi
+	@if [ ! -f "$(CREDENTIALS_FILE)" ]; then \
+		echo "Creating template credentials.json..."; \
+		echo '{\n    "api_key": "your_api_key_here",\n    "api_secret": "your_api_secret_here"\n}' > $(CREDENTIALS_FILE); \
+		echo "Please update $(CREDENTIALS_FILE) with your actual credentials."; \
+	fi
 
 # Help target
 help:
@@ -56,4 +70,5 @@ help:
 	@echo "  make install  : Installs requirements in virtual environment"
 	@echo "  make run      : Runs the application"
 	@echo "  make clean    : Removes virtual environment"
+	@echo "  make credentials: Creates credentials directory and template file"
 	@echo "  make help     : Shows this help message"
