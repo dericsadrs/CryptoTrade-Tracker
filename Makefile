@@ -6,6 +6,7 @@ PYTHON := python3
 PIP := pip3
 APP_PATH := src/app.py
 REQUIREMENTS := requirements.txt
+TEST_PATH := tests/test_clients.py
 
 # Check if we're on Windows
 ifeq ($(OS),Windows_NT)
@@ -18,7 +19,7 @@ else
 	ACTIVATE := $(VENV_NAME)/bin/activate
 endif
 
-.PHONY: all venv install run clean
+.PHONY: all venv install run test clean help
 
 # Default target
 all: venv install run
@@ -42,6 +43,11 @@ run: venv
 	@echo "Running application..."
 	@. $(ACTIVATE) && $(PYTHON_VENV) $(APP_PATH)
 
+# Run unit tests
+test: venv
+	@echo "Running unit tests..."
+	@. $(ACTIVATE) && $(PYTHON_VENV) -m unittest $(TEST_PATH)
+
 # Clean up virtual environment
 clean:
 	@echo "Cleaning up..."
@@ -55,5 +61,6 @@ help:
 	@echo "  make venv     : Creates virtual environment if it doesn't exist"
 	@echo "  make install  : Installs requirements in virtual environment"
 	@echo "  make run      : Runs the application"
+	@echo "  make test     : Runs unit tests"
 	@echo "  make clean    : Removes virtual environment"
 	@echo "  make help     : Shows this help message"
