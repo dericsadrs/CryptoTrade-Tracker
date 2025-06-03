@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from services.binance.binance_client import BinanceClient
-
+                                                                    
 class TestBinanceClient(unittest.TestCase):
 
     @patch('services.binance_client.Client')
